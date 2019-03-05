@@ -1,4 +1,4 @@
 isp.yaml
 isp.yaml.backup.*
-*-lst.raw
-*-ids.raw
+./*-lst.raw
+./*-ids.raw
