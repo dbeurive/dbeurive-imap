@@ -1,8 +1,6 @@
 from typing import List, Union, Tuple
 from imaplib import IMAP4_SSL
-from dbeurive.imap.parser import ListMailbox
-import re
-from pprint import pprint
+from dbeurive.imap.parser import ListMailbox, ListEmailIds
 
 class Client:
     """This class implements an IMAP client.
@@ -164,15 +162,15 @@ class Client:
         Raises:
             Exception: if the client could not get the list of IDs.
         """
-        status, ids = self.get_raw_emails_ids(*criteria, mailbox=mailbox)
-        if 'OK' != status:
-            raise Exception(f'Cannot get the list of email in the mailbox {self._selected_mailbox}! Status code is {status}')
-        if 0 == len(ids):
-            raise Exception(
-                f'Cannot get the list of email in the mailbox {self._selected_mailbox}! No list of IDs is returned!')
-        return re.split('\s+', ids[0].decode())
+        ids = self.get_raw_emails_ids(*criteria, mailbox=mailbox)
+        if ids is None:
+            raise Exception(f'Cannot get the list of email in the mailbox {self._selected_mailbox}! No list of IDs is returned!')
+        return self._search(ids)
+        # ListEmailIds.reset()
+        # ListEmailIds.parse(ids[0].decode())
+        # return ListEmailIds.get_tokens_values()
 
-    def get_raw_emails_ids(self, *criteria, mailbox=None) -> Tuple[str, List[bytes]]:
+    def get_raw_emails_ids(self, *criteria, mailbox=None) -> Union[List[bytes], None]:
         """Get the IDs of the emails stored within a mailbox, a raw data.
 
         Args:
@@ -180,9 +178,11 @@ class Client:
             mailbox (Union[None, str]): optional name of a mailbox.
 
         Returns:
-            Tuple[str, List[bytes]]: the method returns two values:
-                * the first value of the operation status.
-                * the list of IDs formatted as a list of bytes.
+            List[bytes]: the list of IDs.
+            None: the client could not get the list of IDs.
+
+        Raises:
+            Exception: if no mailbox has been selected.
         """
         self._authenticated_or_die()
         if mailbox is not None:
@@ -190,7 +190,12 @@ class Client:
         if self._selected_mailbox is None:
             raise Exception('In order to get the list of emails in a mailbox, you must select a mailbox first!')
         criteria = ['ALL'] if 0 == len(criteria) else criteria
-        return self._imap.search(None, *criteria)
+        # noinspection PyUnusedLocal
+        status: str
+        status, ids = self._imap.search(None, *criteria)
+        if 'OK' != status:
+            return None
+        return ids
 
     def get_hostname(self) -> str:
         """Return the IMAP server hostname.
@@ -265,6 +270,23 @@ class Client:
             tokens = ListMailbox.get_tokens()
             result.append([ t[1] for t in tokens if t[0] == ListMailbox.TYPE_PATH ])
         return result
+
+    @staticmethod
+    def _search(emails_ids: List[bytes]) -> Union[None, List[str]]:
+        """Given the raw output of the IMAP "search" function, the method return the IDs of the emails.
+
+        Args:
+            emails_ids (List[bytes]): the list of emails IDs, as returned by the IMAP "search" function.
+
+        Returns:
+            List[str]: the list of IDs.
+            None: if the method could not interpret the given input, then it returns the value None.
+        """
+        if len(emails_ids) != 1:
+            return None
+        ListEmailIds.reset()
+        ListEmailIds.parse(emails_ids[0].decode())
+        return ListEmailIds.get_tokens_values()
 
     def _authenticated_or_die(self):
         """If the client is not authenticated, then raise en exception!

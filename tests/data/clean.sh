@@ -5,3 +5,4 @@ while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
 readonly __DIR__="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 rm -f "${__DIR__}"/*-lst.raw
+rm -f "${__DIR__}"/*-ids.raw

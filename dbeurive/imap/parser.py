@@ -4,6 +4,30 @@ import re
 
 
 
+class ListEmailIds:
+
+    TYPE_ID = 0
+    _tokens: List[Tuple[int, str]] = []
+
+    @staticmethod
+    def parse(text: str) -> bool:
+        text = text.strip()
+        __class__._tokens = list(map(lambda x: (__class__.TYPE_ID, x), re.split('\s+', text)))
+        return True
+
+    @staticmethod
+    def reset() -> None:
+        __class__._tokens = []
+        pass
+
+    @staticmethod
+    def get_tokens() -> List[Tuple[int, str]]:
+        return __class__._tokens
+
+    @staticmethod
+    def get_tokens_values() -> List[str]:
+        return list(map(lambda x: x[1], __class__._tokens))
+
 class ListMailbox:
     """This class implements the parser that process the result of the "list" command.
 
